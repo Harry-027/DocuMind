@@ -28,7 +28,7 @@ impl VectorStore {
         Self { client: db_client }
     }
 
-    // create_collection to be private by default. To be created based on doc name
+    // create_collection to be a private method. Collection to be created based on doc name
     async fn create_collection(
         &self,
         collection_name: &str,
