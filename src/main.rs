@@ -17,7 +17,6 @@ use vector_db::VectorStore;
 #[derive(Clone)]
 struct AppState {
     processor: Arc<Processor>,
-    vec_store: Arc<VectorStore>,
 }
 
 #[tokio::main]
@@ -32,8 +31,7 @@ async fn main() {
 
     // the shared app state for handlers
     let state = AppState {
-        processor: Arc::new(Processor::new(settings.clone())),
-        vec_store: Arc::new(vector_db::VectorStore::new(&db_url)),
+        processor: Arc::new(Processor::new(settings.clone(), VectorStore::new(&db_url))),
     };
 
     // the routes configuration

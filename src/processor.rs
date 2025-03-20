@@ -8,21 +8,21 @@ use crate::{
 
 pub struct Processor {
     pub settings: ConfigVar,
+    pub vec_store: VectorStore,
 }
 
 impl Processor {
-    pub fn new(settings: ConfigVar) -> Self {
-        Self { settings }
+    pub fn new(settings: ConfigVar, vec_store: VectorStore) -> Self {
+        Self {
+            settings,
+            vec_store,
+        }
     }
 
-    pub async fn process_file(
-        &self,
-        file_name: &str,
-        vec_store: &VectorStore,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn process_file(&self, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let chunks = self.process_chunks(file_name)?;
         let embeddings = self.process_embeddings(chunks.to_owned()).await?;
-        self.store_embeddings(file_name, embeddings.to_owned(), &vec_store)
+        self.store_embeddings(file_name, embeddings.to_owned())
             .await?;
         Ok(())
     }
@@ -31,8 +31,6 @@ impl Processor {
         &self,
         user_query: &str,
         coll_name: &str,
-        vec_store: &VectorStore,
-        processor: &Processor,
     ) -> Result<String, Box<dyn std::error::Error>> {
         // split user query into chunks
         let chunk_size = self
@@ -42,20 +40,20 @@ impl Processor {
             .expect("required chunk size");
         let chunks = chunk_text(&user_query, *chunk_size);
         let embeddings = self.process_embeddings(chunks.to_owned()).await?;
-        println!("embeddings:: {:?}", embeddings);
+
         let mut all_payloads = vec![];
         for embedding in embeddings {
-            let payloads = vec_store.search_result(coll_name, embedding.1).await?;
+            let payloads = self.vec_store.search_result(coll_name, embedding.1).await?;
             println!("Payloads:: {:?}", payloads);
             all_payloads.extend(payloads);
         }
         let context = all_payloads.join(",");
-        let generate_model_url = processor
+        let generate_model_url = &self
             .settings
             .generate_model_url
             .as_ref()
             .expect("generate model string is expected");
-        let generate_model_name = processor
+        let generate_model_name = &self
             .settings
             .generate_model_name
             .as_ref()
@@ -118,9 +116,10 @@ impl Processor {
         &self,
         coll_name: &str,
         embeddings: Vec<(String, Vec<f32>, String)>,
-        vec_store: &VectorStore,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        vec_store.store_embeddings(coll_name, embeddings).await?;
+        self.vec_store
+            .store_embeddings(coll_name, embeddings)
+            .await?;
         Ok(())
     }
 }

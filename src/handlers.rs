@@ -23,12 +23,7 @@ pub async fn upload_file(
     Json(data): Json<InputFile>,
 ) -> impl IntoResponse {
     let file_name = data.file_name;
-    let vec_store_clone = state.vec_store.clone();
-    match state
-        .processor
-        .process_file(file_name.as_str(), vec_store_clone.as_ref())
-        .await
-    {
+    match state.processor.process_file(file_name.as_str()).await {
         Ok(()) => StatusCode::OK.into_response(),
         Err(e) => {
             eprintln!("error occurred:: {}", e.to_string());
@@ -44,14 +39,8 @@ pub async fn prompt(
     let user_query = data.user_query;
     let doc_name = data.doc_name;
     let processor = state.processor.clone();
-    let vec_store = state.vec_store.clone();
     match processor
-        .process_prompt(
-            user_query.as_str(),
-            doc_name.as_str(),
-            &vec_store,
-            &processor,
-        )
+        .process_prompt(user_query.as_str(), doc_name.as_str())
         .await
     {
         Ok(response) => (StatusCode::OK, response).into_response(),
