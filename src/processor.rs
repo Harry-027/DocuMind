@@ -2,7 +2,10 @@ use tokio::task;
 use uuid::Uuid;
 
 use crate::{
-    utils::{chunk_text, extract_file_content, get_embeddings, send_request, ConfigVar},
+    utils::{
+        chunk_text, extract_file_content, get_content_embeddings, send_request, ConfigVar,
+        ModelKind,
+    },
     vector_db::VectorStore,
 };
 
@@ -22,7 +25,7 @@ impl Processor {
     pub async fn process_file(&self, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let chunks = self.process_chunks(file_name)?;
         let embeddings = self.process_embeddings(chunks.to_owned()).await?;
-        self.store_embeddings(file_name, embeddings.to_owned())
+        self.save_embeddings(file_name, embeddings.to_owned())
             .await?;
         Ok(())
     }
@@ -41,6 +44,7 @@ impl Processor {
         let chunks = chunk_text(&user_query, *chunk_size);
         let embeddings = self.process_embeddings(chunks.to_owned()).await?;
 
+        // get all the payloads similar to embedding
         let mut all_payloads = vec![];
         for embedding in embeddings {
             let payloads = self.vec_store.search_result(coll_name, embedding.1).await?;
@@ -48,16 +52,10 @@ impl Processor {
             all_payloads.extend(payloads);
         }
         let context = all_payloads.join(",");
-        let generate_model_url = &self
+        let (generate_model_url, generate_model_name) = self
             .settings
-            .generate_model_url
-            .as_ref()
-            .expect("generate model string is expected");
-        let generate_model_name = &self
-            .settings
-            .generate_model_name
-            .as_ref()
-            .expect("model name is expected");
+            .get_model_details(ModelKind::Generate)
+            .unwrap();
         let prompt = format!(
             "You are an expert providing factually accurate answers.
             Use only the information from the context to generate your answer.
@@ -96,13 +94,13 @@ impl Processor {
     ) -> Result<Vec<(String, Vec<f32>, String)>, Box<dyn std::error::Error>> {
         let mut tasks = vec![];
         for (_i, chunk) in chunks.into_iter().enumerate() {
-            let settings_clone = self.settings.clone();
+            let settings = self.settings.clone();
             tasks.push(task::spawn(async move {
                 let chunk_clone = chunk.clone();
-                let embedding = get_embeddings(&settings_clone, chunk_clone.as_str())
+                let embedding = get_content_embeddings(settings, chunk_clone.as_str())
                     .await
                     .unwrap();
-                (Uuid::new_v4().to_string(), embedding, chunk_clone)
+                (Uuid::new_v4().to_string(), embedding.clone(), chunk_clone)
             }))
         }
 
@@ -112,7 +110,7 @@ impl Processor {
         Ok(embeddings)
     }
 
-    pub async fn store_embeddings(
+    pub async fn save_embeddings(
         &self,
         coll_name: &str,
         embeddings: Vec<(String, Vec<f32>, String)>,

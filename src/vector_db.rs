@@ -86,7 +86,8 @@ impl VectorStore {
         Ok(())
     }
 
-    // search the similar points
+    // search for the similar points along with payload
+    // payload to be sent to LLM as context.
     pub async fn search_result(
         &self,
         collection_name: &str,

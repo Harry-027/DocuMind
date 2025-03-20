@@ -7,6 +7,11 @@ use config::Config;
 
 pub const ENV_FILE: &str = "env.yaml";
 
+pub enum ModelKind {
+    Generate,
+    Embedding,
+}
+
 #[derive(serde_derive::Deserialize, Clone, Debug)]
 pub struct ConfigVar {
     pub embedding_model_url: Option<String>,
@@ -15,6 +20,36 @@ pub struct ConfigVar {
     pub generate_model_name: Option<String>,
     pub db_url: Option<String>,
     pub embedding_model_chunk_size: Option<usize>,
+}
+
+impl ConfigVar {
+    //get the model details from the config var based on kind enum
+    pub fn get_model_details(&self, kind: ModelKind) -> Result<(&String, &String), ()> {
+        match kind {
+            ModelKind::Generate => {
+                let model_url = &self
+                    .generate_model_url
+                    .as_ref()
+                    .expect("model url is expected");
+                let model_name = &self
+                    .generate_model_name
+                    .as_ref()
+                    .expect("model name is expected");
+                Ok((model_url, model_name))
+            }
+            ModelKind::Embedding => {
+                let model_url = &self
+                    .embedding_model_url
+                    .as_ref()
+                    .expect("model url is expected");
+                let model_name = &self
+                    .embedding_model_name
+                    .as_ref()
+                    .expect("model name is expected");
+                Ok((model_url, model_name))
+            }
+        }
+    }
 }
 
 // fetch the config variables
@@ -48,38 +83,6 @@ pub fn chunk_text(text: &str, chunk_size: usize) -> Vec<String> {
         .collect()
 }
 
-// get the embeddings from the model
-pub async fn get_embeddings(
-    settings: &ConfigVar,
-    content: &str,
-) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
-    let embedding_url = settings
-        .embedding_model_url
-        .as_ref()
-        .expect("embedding model string is required");
-    let embedding_model_name = settings
-        .embedding_model_name
-        .as_ref()
-        .expect("embedding model name is expected");
-    let response = send_request(
-        embedding_url.as_str(),
-        embedding_model_name.as_str(),
-        content,
-    )
-    .await?;
-
-    let response_json: serde_json::Value =
-        serde_json::from_str(response.as_str()).expect("expected parsing");
-
-    let embeddings: Vec<f32> = response_json["embedding"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|v| v.as_f64().unwrap() as f32)
-        .collect();
-    Ok(embeddings)
-}
-
 // send_request helps to send the request to ollama api
 pub async fn send_request(
     url: &str,
@@ -104,4 +107,24 @@ pub async fn send_request(
         Ok(response) => response.text().await,
         Err(err) => Err(err),
     }
+}
+
+// get the content embeddings from the embedding gen model
+pub async fn get_content_embeddings(
+    settings: ConfigVar,
+    content: &str,
+) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
+    let (model_url, model_name) = settings.get_model_details(ModelKind::Embedding).unwrap();
+    let response = send_request(model_url.as_str(), model_name.as_str(), content).await?;
+
+    let response_json: serde_json::Value =
+        serde_json::from_str(response.as_str()).expect("expected parsing");
+
+    let embeddings: Vec<f32> = response_json["embedding"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_f64().unwrap() as f32)
+        .collect();
+    Ok(embeddings)
 }

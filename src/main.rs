@@ -9,7 +9,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use handlers::{prompt, root, upload_file};
+use handlers::{doc_names, prompt_handler, upload_file};
 use processor::Processor;
 use utils::{get_settings, ConfigVar};
 use vector_db::VectorStore;
@@ -21,7 +21,7 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
-    // fetch the configured variables via get_settings()
+    // fetch the env configured variables
     let settings: ConfigVar = get_settings();
 
     let db_url = settings
@@ -29,17 +29,17 @@ async fn main() {
         .as_ref()
         .expect("db url connection string is required");
 
-    // the shared app state for handlers
+    // shared app state for handlers
     let state = AppState {
         processor: Arc::new(Processor::new(settings.clone(), VectorStore::new(&db_url))),
     };
 
     // the routes configuration
     let app = Router::new()
-        .route("/", get(root))
+        .route("/", get(doc_names))
         .route("/upload", post(upload_file))
         .with_state(state.clone())
-        .route("/prompt", post(prompt))
+        .route("/prompt", post(prompt_handler))
         .with_state(state.clone());
 
     // start the app server

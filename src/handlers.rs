@@ -14,7 +14,7 @@ pub struct InputPrompt {
     doc_name: String,
 }
 
-pub async fn root() {
+pub async fn doc_names() {
     todo!()
 }
 
@@ -32,13 +32,13 @@ pub async fn upload_file(
     }
 }
 
-pub async fn prompt(
+pub async fn prompt_handler(
     State(state): State<AppState>,
     Json(data): Json<InputPrompt>,
 ) -> impl IntoResponse {
     let user_query = data.user_query;
     let doc_name = data.doc_name;
-    let processor = state.processor.clone();
+    let processor = state.processor;
     match processor
         .process_prompt(user_query.as_str(), doc_name.as_str())
         .await
