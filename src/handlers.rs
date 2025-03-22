@@ -5,6 +5,7 @@ use axum::{
     Json,
 };
 use serde::Deserialize;
+use tracing::debug;
 
 use crate::{utils::read_file, AppState};
 
@@ -15,19 +16,38 @@ pub struct InputPrompt {
 }
 
 pub async fn doc_names(State(state): State<AppState>) -> impl IntoResponse {
-    let collection_names = state.processor.vec_store.list_collections().await.unwrap();
-    (collection_names.join(",")).into_response()
+    match state.processor.vec_store.list_collections().await {
+        Ok(collection_names) => (collection_names.join(",")).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
 }
 
 pub async fn upload_file(State(state): State<AppState>, multipart: Multipart) -> impl IntoResponse {
-    let file_name = read_file(multipart).await.unwrap();
-    match state.processor.process_file(file_name.as_str()).await {
-        Ok(()) => StatusCode::OK.into_response(),
+    let file_names = match read_file(multipart).await {
+        Ok(file_names) => file_names,
         Err(e) => {
-            eprintln!("error occurred:: {}", e.to_string());
-            e.to_string().into_response()
+            debug!("unable to read the file: {}", e);
+            vec![]
         }
     };
+    if file_names.len() == 0 {
+        return (StatusCode::BAD_REQUEST, "no pdf files were uploaded").into_response();
+    }
+    let mut processed_files = vec![];
+    for file_name in file_names.iter() {
+        match state.processor.process_file(file_name.as_str()).await {
+            Ok(()) => processed_files.push(file_name),
+            Err(e) => {
+                eprintln!("error occurred:: {}", e.to_string());
+            }
+        };
+    }
+
+    if processed_files.len() == file_names.len() {
+        (StatusCode::OK, "files uploaded successfully").into_response()
+    } else {
+        "one or more uploads failed".to_string().into_response()
+    }
 }
 
 pub async fn prompt_handler(

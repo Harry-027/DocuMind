@@ -1,7 +1,4 @@
-use std::{
-    fs,
-    io::{Error, Write},
-};
+use std::{fs, io::Write};
 
 use axum::{
     extract::{Multipart, Request},
@@ -12,7 +9,9 @@ use reqwest::Client;
 use serde_json::json;
 
 use config::Config;
-use tracing::info;
+use tracing::{debug, info};
+
+use anyhow::{anyhow, Context, Ok, Result};
 
 pub const ENV_FILE: &str = "env.yaml";
 
@@ -41,7 +40,7 @@ pub struct ConfigVar {
 
 impl ConfigVar {
     //get the model details from the config var based on kind enum
-    pub fn get_model_details(&self, kind: ModelKind) -> Result<(&String, &String), ()> {
+    pub fn get_model_details(&self, kind: ModelKind) -> Result<(&String, &String)> {
         match kind {
             ModelKind::Generate => {
                 let model_url = &self
@@ -80,15 +79,10 @@ pub fn get_settings() -> ConfigVar {
 }
 
 // extract the file content
-pub fn extract_file_content(file_name: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn extract_file_content(file_name: &str) -> Result<String> {
     let file_path = format!("./uploads/{}", file_name);
-    match pdf_extract::extract_text(file_path) {
-        Ok(content) => Ok(content),
-        Err(err) => Err(Box::new(Error::new(
-            std::io::ErrorKind::InvalidData,
-            err.to_string(),
-        ))),
-    }
+    let content = pdf_extract::extract_text(file_path).context("failed to extract the text")?;
+    Ok(content)
 }
 
 // chunk the large text based on chunk size
@@ -101,11 +95,7 @@ pub fn chunk_text(text: &str, chunk_size: usize) -> Vec<String> {
 }
 
 // send_request helps to send the request to ollama api
-pub async fn send_request(
-    url: &str,
-    model_name: &str,
-    prompt: &str,
-) -> Result<String, reqwest::Error> {
+pub async fn send_request(url: &str, model_name: &str, prompt: &str) -> Result<String> {
     let client = Client::new();
 
     let req_body = json!({
@@ -114,28 +104,22 @@ pub async fn send_request(
         "stream": false,
     });
 
-    match client
+    let response = client
         .post(url)
         .header("Content-Type", "application/json")
         .json(&req_body)
         .send()
-        .await
-    {
-        Ok(response) => response.text().await,
-        Err(err) => Err(err),
-    }
+        .await?;
+    let text_result = response.text().await?;
+    Ok(text_result)
 }
 
 // get the content embeddings from the embedding gen model
-pub async fn get_content_embeddings(
-    settings: ConfigVar,
-    content: &str,
-) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn get_content_embeddings(settings: ConfigVar, content: &str) -> Result<Vec<f32>> {
     let (model_url, model_name) = settings.get_model_details(ModelKind::Embedding).unwrap();
     let response = send_request(model_url.as_str(), model_name.as_str(), content).await?;
 
-    let response_json: serde_json::Value =
-        serde_json::from_str(response.as_str()).expect("expected parsing");
+    let response_json: serde_json::Value = serde_json::from_str(response.as_str())?;
 
     let embeddings: Vec<f32> = response_json["embedding"]
         .as_array()
@@ -147,36 +131,31 @@ pub async fn get_content_embeddings(
 }
 
 // Read the pdf file
-pub async fn read_file(mut multipart: Multipart) -> Result<String, Box<dyn std::error::Error>> {
-    while let Some(field) = multipart.next_field().await.unwrap() {
+pub async fn read_file(mut multipart: Multipart) -> Result<Vec<String>> {
+    let mut uploaded_files = vec![];
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .context("Failed to read field")?
+    {
         if let Some(file_name) = field.file_name().map(|name| name.to_string()) {
             if !is_pdf(file_name.as_str()) {
-                return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "Only Pdf files are allowed",
-                )));
+                return Err(anyhow!("Only Pdf files are allowed"));
             }
 
-            let bytes = field.bytes().await?;
+            let bytes = field.bytes().await.context("unable to fetch field bytes")?;
             // Save to server
             let file_path = format!("./uploads/{}", file_name);
-            match save_file(&file_path, &bytes) {
-                Ok(_) => {
-                    return Ok(file_name);
-                }
-                Err(_) => {
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Error occurred while saving the file",
-                    )));
-                }
-            };
+            debug!("should come here");
+            save_file(&file_path, &bytes).context("error occurred while saving the file")?;
+            uploaded_files.push(file_name);
         }
     }
-    Err(Box::new(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
-        "file doesn't exist",
-    )))
+
+    if uploaded_files.is_empty() {
+        return Err(anyhow!("No valid PDF files were uploaded."));
+    }
+    Ok(uploaded_files)
 }
 
 // Validate PDF File Extension
@@ -189,9 +168,9 @@ fn is_pdf(file_name: &str) -> bool {
 }
 
 // Save File to Server
-fn save_file(file_path: &str, data: &[u8]) -> std::io::Result<()> {
+fn save_file(file_path: &str, data: &[u8]) -> Result<()> {
     fs::create_dir_all("./uploads")?;
     let mut file = fs::File::create(file_path)?;
-    file.write_all(data)?;
+    file.write_all(data).context("write operation failed")?;
     Ok(())
 }

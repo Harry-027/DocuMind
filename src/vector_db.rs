@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use anyhow::{anyhow, Context, Ok, Result};
 use qdrant_client::{
     qdrant::{
         CreateCollectionBuilder, Distance, PointId, PointStruct, SearchPoints, UpsertPointsBuilder,
@@ -16,7 +17,7 @@ pub struct VectorStore {
 // initialize the db client
 fn db_init(url: &str) -> Qdrant {
     let qdrant_client = match Qdrant::from_url(url).build() {
-        Ok(client) => client,
+        std::result::Result::Ok(client) => client,
         Err(err) => panic!("unable to connect to DB! {}", err.to_string()),
     };
     return qdrant_client;
@@ -30,37 +31,28 @@ impl VectorStore {
     }
 
     // create_collection to be a private method. Collection to be created based on doc name
-    async fn create_collection(
-        &self,
-        collection_name: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        match self.client.collection_exists(collection_name).await {
-            Ok(exists) => {
-                if exists {
-                    Ok(())
-                } else {
-                    let coll_created = self
-                        .client
-                        .create_collection(
-                            CreateCollectionBuilder::new(collection_name)
-                                .vectors_config(VectorParamsBuilder::new(768, Distance::Cosine)),
-                        )
-                        .await?;
-                    if coll_created.result {
-                        Ok(())
-                    } else {
-                        Err(Box::new(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            "internal error",
-                        )))
-                    }
-                }
+    async fn create_collection(&self, collection_name: &str) -> Result<()> {
+        let collection_exists = self
+            .client
+            .collection_exists(collection_name)
+            .await
+            .context("collection_exists operation failed!")?;
+        if !collection_exists {
+            let new_collection = self
+                .client
+                .create_collection(
+                    CreateCollectionBuilder::new(collection_name)
+                        .vectors_config(VectorParamsBuilder::new(768, Distance::Cosine)),
+                )
+                .await
+                .context("create new collection failed")?;
+            if new_collection.result {
+                return Ok(());
+            } else {
+                return Err(anyhow!("unable to create the new collection"));
             }
-            Err(err) => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                err.to_string(),
-            ))),
         }
+        Err(anyhow!("collection already exists"))
     }
 
     // saves the vector embeddings to database
@@ -68,7 +60,7 @@ impl VectorStore {
         &self,
         collection_name: &str,
         embeddings: Vec<(String, Vec<f32>, String)>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<()> {
         self.create_collection(collection_name).await?;
         let points: Vec<PointStruct> = embeddings
             .into_iter()
@@ -82,7 +74,7 @@ impl VectorStore {
         self.client
             .upsert_points(UpsertPointsBuilder::new(collection_name, points).wait(true))
             .await
-            .unwrap();
+            .context("upsert_points operation failed")?;
         info!("embeddings saved successfully!");
         Ok(())
     }
@@ -93,7 +85,7 @@ impl VectorStore {
         &self,
         collection_name: &str,
         query: Vec<f32>,
-    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<String>> {
         let search_result = self
             .client
             .search_points(SearchPoints {
@@ -103,7 +95,8 @@ impl VectorStore {
                 with_payload: Some(true.into()),
                 ..Default::default()
             })
-            .await?;
+            .await
+            .context("unable to fetch the results")?;
 
         let payloads: Vec<String> = search_result
             .result
@@ -118,8 +111,12 @@ impl VectorStore {
     }
 
     //list out the collection names
-    pub async fn list_collections(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-        let collections = self.client.list_collections().await?;
+    pub async fn list_collections(&self) -> Result<Vec<String>> {
+        let collections = self
+            .client
+            .list_collections()
+            .await
+            .context("list_collections operation failed")?;
         let collection_names: Vec<String> = collections
             .collections
             .into_iter()
