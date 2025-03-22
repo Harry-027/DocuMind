@@ -21,6 +21,7 @@ pub enum ModelKind {
     Embedding,
 }
 
+// log_request is the basic logging middleware for the server
 pub async fn log_request(req: Request, next: middleware::Next) -> Response {
     info!("Incoming request: {} {}", req.method(), req.uri());
     let response = next.run(req).await;

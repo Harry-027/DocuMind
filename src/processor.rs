@@ -23,6 +23,8 @@ impl Processor {
         }
     }
 
+    // process_file splits the text into chunks so to generate the embeddings
+    // for proper context length and saves them to the db
     pub async fn process_file(&self, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let chunks = self.process_chunks(file_name)?;
         let embeddings = self.process_embeddings(chunks.to_owned()).await.unwrap();
@@ -31,6 +33,8 @@ impl Processor {
         Ok(())
     }
 
+    // process_prompt gets the similar cosine embeddings for the user prompt
+    // and sets the context for LLM to get the result generated as per the context
     pub async fn process_prompt(
         &self,
         user_query: &str,
@@ -45,18 +49,23 @@ impl Processor {
         let chunks = chunk_text(&user_query, *chunk_size);
         let embeddings = self.process_embeddings(chunks.to_owned()).await.unwrap();
 
-        // get all the payloads similar to embedding
+        // get all the payloads similar to prompt embedding
         let mut all_payloads = vec![];
         for embedding in embeddings {
             let payloads = self.vec_store.search_result(coll_name, embedding.1).await?;
             debug!("Payloads:: {:?}", payloads);
             all_payloads.extend(payloads);
         }
+
+        // set the LLM context
         let context = all_payloads.join(",");
+
         let (generate_model_url, generate_model_name) = self
             .settings
             .get_model_details(ModelKind::Generate)
             .unwrap();
+
+        // final prompt to the LLM
         let prompt = format!(
             "You are an expert providing factually accurate answers.
             Use only the information from the context to generate your answer.
@@ -75,6 +84,7 @@ impl Processor {
         Ok(response)
     }
 
+    // process_chunks splits the large text into chunks
     pub fn process_chunks(
         &self,
         file_name: &str,
@@ -89,6 +99,7 @@ impl Processor {
         Ok(chunks)
     }
 
+    // process_embedding generates the embeddings for different chunk texts parallely
     pub async fn process_embeddings(
         &self,
         chunks: Vec<String>,
@@ -111,6 +122,7 @@ impl Processor {
         Ok(embeddings)
     }
 
+    // save_embeddings saves the embeddings to the vector DB
     pub async fn save_embeddings(
         &self,
         coll_name: &str,
