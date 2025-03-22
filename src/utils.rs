@@ -1,5 +1,9 @@
-use std::io::Error;
+use std::{
+    fs,
+    io::{Error, Write},
+};
 
+use axum::extract::Multipart;
 use reqwest::Client;
 use serde_json::json;
 
@@ -64,7 +68,7 @@ pub fn get_settings() -> ConfigVar {
 
 // extract the file content
 pub fn extract_file_content(file_name: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let file_path = format!("uploads/{}", file_name);
+    let file_path = format!("./uploads/{}", file_name);
     match pdf_extract::extract_text(file_path) {
         Ok(content) => Ok(content),
         Err(err) => Err(Box::new(Error::new(
@@ -113,7 +117,7 @@ pub async fn send_request(
 pub async fn get_content_embeddings(
     settings: ConfigVar,
     content: &str,
-) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
+) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
     let (model_url, model_name) = settings.get_model_details(ModelKind::Embedding).unwrap();
     let response = send_request(model_url.as_str(), model_name.as_str(), content).await?;
 
@@ -127,4 +131,54 @@ pub async fn get_content_embeddings(
         .map(|v| v.as_f64().unwrap() as f32)
         .collect();
     Ok(embeddings)
+}
+
+// Read the pdf file
+pub async fn read_file(mut multipart: Multipart) -> Result<String, Box<dyn std::error::Error>> {
+    while let Some(field) = multipart.next_field().await.unwrap() {
+        if let Some(file_name) = field.file_name().map(|name| name.to_string()) {
+            if !is_pdf(file_name.as_str()) {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Only Pdf files are allowed",
+                )));
+            }
+
+            let bytes = field.bytes().await?;
+            // Save to server
+            let file_path = format!("./uploads/{}", file_name);
+            match save_file(&file_path, &bytes) {
+                Ok(_) => {
+                    return Ok(file_name);
+                }
+                Err(_) => {
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Error occurred while saving the file",
+                    )));
+                }
+            };
+        }
+    }
+    Err(Box::new(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        "file doesn't exist",
+    )))
+}
+
+// Validate PDF File Extension
+fn is_pdf(file_name: &str) -> bool {
+    std::path::Path::new(file_name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.eq_ignore_ascii_case("pdf"))
+        .unwrap_or(false)
+}
+
+// Save File to Server
+fn save_file(file_path: &str, data: &[u8]) -> std::io::Result<()> {
+    fs::create_dir_all("./uploads")?;
+    let mut file = fs::File::create(file_path)?;
+    file.write_all(data)?;
+    Ok(())
 }

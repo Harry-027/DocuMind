@@ -24,7 +24,7 @@ impl Processor {
 
     pub async fn process_file(&self, file_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let chunks = self.process_chunks(file_name)?;
-        let embeddings = self.process_embeddings(chunks.to_owned()).await?;
+        let embeddings = self.process_embeddings(chunks.to_owned()).await.unwrap();
         self.save_embeddings(file_name, embeddings.to_owned())
             .await?;
         Ok(())
@@ -42,7 +42,7 @@ impl Processor {
             .as_ref()
             .expect("required chunk size");
         let chunks = chunk_text(&user_query, *chunk_size);
-        let embeddings = self.process_embeddings(chunks.to_owned()).await?;
+        let embeddings = self.process_embeddings(chunks.to_owned()).await.unwrap();
 
         // get all the payloads similar to embedding
         let mut all_payloads = vec![];

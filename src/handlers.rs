@@ -1,12 +1,12 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{
+    extract::{Multipart, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
 use serde::Deserialize;
 
-use crate::AppState;
-
-#[derive(Deserialize)]
-pub struct InputFile {
-    file_name: String,
-}
+use crate::{utils::read_file, AppState};
 
 #[derive(Deserialize)]
 pub struct InputPrompt {
@@ -18,18 +18,15 @@ pub async fn doc_names() {
     todo!()
 }
 
-pub async fn upload_file(
-    State(state): State<AppState>,
-    Json(data): Json<InputFile>,
-) -> impl IntoResponse {
-    let file_name = data.file_name;
+pub async fn upload_file(State(state): State<AppState>, multipart: Multipart) -> impl IntoResponse {
+    let file_name = read_file(multipart).await.unwrap();
     match state.processor.process_file(file_name.as_str()).await {
         Ok(()) => StatusCode::OK.into_response(),
         Err(e) => {
             eprintln!("error occurred:: {}", e.to_string());
-            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+            e.to_string().into_response()
         }
-    }
+    };
 }
 
 pub async fn prompt_handler(
