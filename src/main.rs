@@ -6,12 +6,15 @@ mod vector_db;
 use std::sync::Arc;
 
 use axum::{
+    middleware,
     routing::{get, post},
     Router,
 };
 use handlers::{doc_names, prompt_handler, upload_file};
 use processor::Processor;
-use utils::{get_settings, ConfigVar};
+use tracing::info;
+use tracing_subscriber;
+use utils::{get_settings, log_request, ConfigVar};
 use vector_db::VectorStore;
 
 #[derive(Clone)]
@@ -21,6 +24,9 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
     // fetch the env configured variables
     let settings: ConfigVar = get_settings();
 
@@ -38,11 +44,12 @@ async fn main() {
     let app = Router::new()
         .route("/", get(doc_names))
         .route("/upload", post(upload_file))
-        .with_state(state.clone())
         .route("/prompt", post(prompt_handler))
+        .layer(middleware::from_fn(log_request))
         .with_state(state.clone());
 
     // start the app server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    info!("Starting server at port: 3000");
     axum::serve(listener, app).await.unwrap();
 }

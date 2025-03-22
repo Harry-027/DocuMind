@@ -1,4 +1,5 @@
 use tokio::task;
+use tracing::debug;
 use uuid::Uuid;
 
 use crate::{
@@ -48,7 +49,7 @@ impl Processor {
         let mut all_payloads = vec![];
         for embedding in embeddings {
             let payloads = self.vec_store.search_result(coll_name, embedding.1).await?;
-            println!("Payloads:: {:?}", payloads);
+            debug!("Payloads:: {:?}", payloads);
             all_payloads.extend(payloads);
         }
         let context = all_payloads.join(",");

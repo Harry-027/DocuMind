@@ -14,8 +14,9 @@ pub struct InputPrompt {
     doc_name: String,
 }
 
-pub async fn doc_names() {
-    todo!()
+pub async fn doc_names(State(state): State<AppState>) -> impl IntoResponse {
+    let collection_names = state.processor.vec_store.list_collections().await.unwrap();
+    (collection_names.join(",")).into_response()
 }
 
 pub async fn upload_file(State(state): State<AppState>, multipart: Multipart) -> impl IntoResponse {

@@ -7,6 +7,7 @@ use qdrant_client::{
     },
     Qdrant,
 };
+use tracing::info;
 
 pub struct VectorStore {
     client: Qdrant,
@@ -82,7 +83,7 @@ impl VectorStore {
             .upsert_points(UpsertPointsBuilder::new(collection_name, points).wait(true))
             .await
             .unwrap();
-        println!("embeddings saved successfully!");
+        info!("embeddings saved successfully!");
         Ok(())
     }
 
@@ -114,5 +115,16 @@ impl VectorStore {
             })
             .collect();
         Ok(payloads)
+    }
+
+    //list out the collection names
+    pub async fn list_collections(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let collections = self.client.list_collections().await?;
+        let collection_names: Vec<String> = collections
+            .collections
+            .into_iter()
+            .map(|coll| coll.name)
+            .collect();
+        Ok(collection_names)
     }
 }

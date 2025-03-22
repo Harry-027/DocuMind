@@ -3,17 +3,29 @@ use std::{
     io::{Error, Write},
 };
 
-use axum::extract::Multipart;
+use axum::{
+    extract::{Multipart, Request},
+    middleware,
+    response::Response,
+};
 use reqwest::Client;
 use serde_json::json;
 
 use config::Config;
+use tracing::info;
 
 pub const ENV_FILE: &str = "env.yaml";
 
 pub enum ModelKind {
     Generate,
     Embedding,
+}
+
+pub async fn log_request(req: Request, next: middleware::Next) -> Response {
+    info!("Incoming request: {} {}", req.method(), req.uri());
+    let response = next.run(req).await;
+    info!("Response status: {}", response.status());
+    response
 }
 
 #[derive(serde_derive::Deserialize, Clone, Debug)]
