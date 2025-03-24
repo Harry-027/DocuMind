@@ -74,7 +74,7 @@ impl Processor {
         let prompt = format!(
             "You are an expert providing factually accurate answers.
             Use only the information from the context to generate your answer.
-            If the context doesn't contain relevant information say I don't know.
+            If the context doesn't contain relevant information say I don't know as context doesn't have much info.
             Context: {context} Question: {user_query} Answer(only use the context for your answer)"
         );
         let res = send_request(

@@ -58,7 +58,11 @@ pub async fn upload_file(State(state): State<AppState>, multipart: Multipart) ->
     if processed_files.len() == file_names.len() {
         (StatusCode::OK, "files uploaded successfully").into_response()
     } else {
-        "one or more uploads failed".to_string().into_response()
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "one or more uploads failed".to_string(),
+        )
+            .into_response()
     }
 }
 

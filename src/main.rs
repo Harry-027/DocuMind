@@ -45,6 +45,7 @@ async fn main() {
         .route("/", get(doc_names))
         .route("/file/{fileName}", get(file_handler))
         .route("/upload", post(upload_file))
+        .layer(axum::extract::DefaultBodyLimit::max(500 * 1024 * 1024))
         .route("/prompt", post(prompt_handler))
         .layer(middleware::from_fn(log_request))
         .with_state(state.clone());

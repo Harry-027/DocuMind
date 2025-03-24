@@ -81,8 +81,13 @@ pub fn get_settings() -> ConfigVar {
 // extract the file content
 pub fn extract_file_content(file_name: &str) -> Result<String> {
     let file_path = format!("./uploads/{}", file_name);
-    let content = pdf_extract::extract_text(file_path).context("failed to extract the text")?;
-    Ok(content)
+    match pdf_extract::extract_text(file_path) {
+        std::result::Result::Ok(content) => Ok(content),
+        Err(e) => {
+            debug!("failed to read the file: {}", e.to_string());
+            Err(anyhow::Error::new(e).context("Failed to read the file"))
+        }
+    }
 }
 
 // chunk the large text based on chunk size
@@ -133,21 +138,26 @@ pub async fn get_content_embeddings(settings: ConfigVar, content: &str) -> Resul
 // Read the pdf file
 pub async fn read_file(mut multipart: Multipart) -> Result<Vec<String>> {
     let mut uploaded_files = vec![];
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .context("Failed to read field")?
-    {
+    while let Some(mut field) = multipart.next_field().await.map_err(|e| {
+        std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("error status:: {} and text {}", e.status(), e.body_text()),
+        )
+    })? {
         if let Some(file_name) = field.file_name().map(|name| name.to_string()) {
             if !is_pdf(file_name.as_str()) {
                 return Err(anyhow!("Only Pdf files are allowed"));
             }
 
-            let bytes = field.bytes().await.context("unable to fetch field bytes")?;
+            let mut data = Vec::new();
+
+            while let Some(chunk) = field.chunk().await? {
+                data.extend_from_slice(&chunk);
+            }
+
             // Save to server
             let file_path = format!("./uploads/{}", file_name);
-            debug!("should come here");
-            save_file(&file_path, &bytes).context("error occurred while saving the file")?;
+            save_file(&file_path, &data).context("error occurred while saving the file")?;
             uploaded_files.push(file_name);
         }
     }
