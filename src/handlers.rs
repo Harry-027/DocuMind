@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Multipart, State},
+    extract::{Multipart, Path, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -7,7 +7,10 @@ use axum::{
 use serde::Deserialize;
 use tracing::debug;
 
-use crate::{utils::read_file, AppState};
+use crate::{
+    utils::{extract_file_content, read_file},
+    AppState,
+};
 
 #[derive(Deserialize)]
 pub struct InputPrompt {
@@ -19,6 +22,15 @@ pub async fn doc_names(State(state): State<AppState>) -> impl IntoResponse {
     match state.processor.vec_store.list_collections().await {
         Ok(collection_names) => (collection_names.join(",")).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+pub async fn file_handler(Path(file_name): Path<String>) -> impl IntoResponse {
+    match extract_file_content(file_name.as_str()) {
+        Ok(data) => data.into_response(),
+        Err(_) => {
+            return (StatusCode::NOT_FOUND, "File not found or cannot be read.").into_response()
+        }
     }
 }
 

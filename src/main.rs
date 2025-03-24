@@ -10,7 +10,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use handlers::{doc_names, prompt_handler, upload_file};
+use handlers::{doc_names, file_handler, prompt_handler, upload_file};
 use processor::Processor;
 use tracing::info;
 use tracing_subscriber;
@@ -25,7 +25,7 @@ struct AppState {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
+        .with_max_level(tracing::Level::DEBUG)
         .init();
     // fetch the env configured variables
     let settings: ConfigVar = get_settings();
@@ -43,6 +43,7 @@ async fn main() {
     // the routes configuration
     let app = Router::new()
         .route("/", get(doc_names))
+        .route("/file/{fileName}", get(file_handler))
         .route("/upload", post(upload_file))
         .route("/prompt", post(prompt_handler))
         .layer(middleware::from_fn(log_request))
