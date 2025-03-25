@@ -1,3 +1,5 @@
+/backend/target
+/backend/qdrant_storage
+/backend/uploads
+
 /target
-/qdrant_storage
-/uploads
