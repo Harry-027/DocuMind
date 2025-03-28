@@ -5,15 +5,15 @@ Turn your documents into dynamic knowledge sources with Documind! Simply upload 
 ---
 
 ## Features
-Ask questions about your documents and get instant, accurate responses.
-Provides relevant, fact-based answers using RAG.
-Documents are processed securely with no data leakage
+* Ask questions about your documents and get instant, accurate responses.
+* Provides relevant, fact-based answers using RAG.
+* Documents are processed securely with no data leakage
 
 ---
 
 ## TechStack
-Using Axum rust server at backend to expose REST Apis and connect with Ollama server for inference & Qdrant vector database for storage.
-Tauri app with React UI for frontend.
+* Using Axum rust server at backend to expose REST Apis and connect with Ollama server for inference & Qdrant vector database for storage.
+* Tauri app with React UI for frontend.
 
 ---
 
@@ -62,9 +62,9 @@ make app_client
 ## ⚙️ Configuration
 
 In the `env.yaml`, you can configure the following -
-- **Chunking Strategy:** You can configure the chunk size (embedding_model_chunk_size).
-- **Embedding Model:** Customize the embedding model (embedding_model_name) for better document understanding.
-- **LLM Model:** Customize the LLM model (generate_model_name) for better document understanding.
+- **Chunking Strategy:** You can configure the chunk size (`embedding_model_chunk_size`).
+- **Embedding Model:** Customize the embedding model (`embedding_model_name`) for better document understanding.
+- **LLM Model:** Customize the LLM model (`generate_model_name`) for better document understanding.
 
 ---
 
