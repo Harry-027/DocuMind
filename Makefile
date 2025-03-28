@@ -8,16 +8,15 @@ run_server:
 	./target/release/DocuMindServer
 	
 
-build_client:
+tauri_client:
 	@echo "Building the client..."
-	cd client && yarn
-	@echo "Done!"
+	cd client && yarn && yarn run dev
+	
 
-run_client:
+app_client:
 	@echo "Running the client..."
-	cp client/src-tauri/.env target/release/.env
+	cp client/src-tauri/.env.example target/release/.env
 	cd target/release/ && ./DocuMindClient
 
 app_server: build_server run_server 
 
-app_client: build_client run_client 

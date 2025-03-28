@@ -17,7 +17,7 @@ Turn your documents into dynamic knowledge sources with Documind! Simply upload 
 
 ---
 
-## 🛠️Installation
+## 🛠️Installation Setup
 
 ### Pre-requisites
 Make sure you have following installed
@@ -51,11 +51,11 @@ ollama pull llama3.1:8b
 git clone https://github.com/Harry-027/DocuMind
 # Change the directory
 cd DocuMind
-# Rename the .env.example file to .env
-mv .env.example .env
 # Run the server
 make app_server
-# Run the client on another terminal
+# Run the tauri client in a new terminal
+make tauri_client
+# Run the app client in another new terminal
 make app_client
 ```
 ---
