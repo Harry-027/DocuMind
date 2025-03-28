@@ -1,5 +1,25 @@
-/backend/target
-/backend/qdrant_storage
-/backend/uploads
+/server/target
+/server/qdrant_storage
+/server/uploads
 
 /target
+/server/target
+/client/src-tauri/target
+
+# Logs
+client/logs
+client/src-tauri/.env
+client/*.log
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+client/pnpm-debug.log*
+client/lerna-debug.log*
+
+client/node_modules
+client/dist
+client/dist-ssr
+client/*.local
+client/.env
+
+.DS_Store

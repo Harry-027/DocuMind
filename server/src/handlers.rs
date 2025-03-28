@@ -4,7 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::{
@@ -18,9 +18,22 @@ pub struct InputPrompt {
     doc_name: String,
 }
 
+#[derive(Serialize)]
+pub struct DocInfo {
+    name: String,
+}
+
 pub async fn doc_names(State(state): State<AppState>) -> impl IntoResponse {
     match state.processor.vec_store.list_collections().await {
-        Ok(collection_names) => (collection_names.join(",")).into_response(),
+        Ok(collection_names) => {
+            let result: Vec<DocInfo> = collection_names
+                .iter()
+                .map(|name| DocInfo {
+                    name: name.to_string(),
+                })
+                .collect();
+            Json(result).into_response()
+        }
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }

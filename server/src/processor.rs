@@ -10,7 +10,7 @@ use crate::{
     vector_db::VectorStore,
 };
 
-use anyhow::{Context, Ok, Result};
+use anyhow::{anyhow, Context, Ok, Result};
 
 pub struct Processor {
     pub settings: ConfigVar,
@@ -30,14 +30,15 @@ impl Processor {
     pub async fn process_file(&self, file_name: &str) -> Result<()> {
         let chunks = self.process_chunks(file_name)?;
         let embeddings = self.process_embeddings(chunks.to_owned()).await.unwrap();
-        self.save_embeddings(file_name, embeddings.to_owned())
+        let coll_name = file_name.split_once(".pdf").unwrap().0;
+        self.save_embeddings(coll_name, embeddings.to_owned())
             .await?;
         Ok(())
     }
 
     // process_prompt gets the similar cosine embeddings for the user prompt
     // and sets the context for LLM to get the result generated as per the context
-    pub async fn process_prompt(&self, user_query: &str, coll_name: &str) -> Result<String> {
+    pub async fn process_prompt(&self, user_query: &str, doc_name: &str) -> Result<String> {
         // split user query into chunks
         let chunk_size = self
             .settings
@@ -52,14 +53,20 @@ impl Processor {
 
         // get all the payloads similar to prompt embedding
         let mut all_payloads = vec![];
-        for embedding in embeddings {
-            let payloads = self
-                .vec_store
-                .search_result(coll_name, embedding.1)
-                .await
-                .with_context(|| format!("unable to fetch the result for {}", coll_name))?;
-            debug!("Payloads:: {:?}", payloads);
-            all_payloads.extend(payloads);
+        if let Some(split_name) = doc_name.split_once(".pdf") {
+            let coll_name = split_name.0;
+            for embedding in embeddings {
+                let payloads = self
+                    .vec_store
+                    .search_result(coll_name, embedding.1)
+                    .await
+                    .with_context(|| format!("unable to fetch the result for {}", coll_name))?;
+                debug!("Payloads:: {:?}", payloads);
+                all_payloads.extend(payloads);
+            }
+        } else {
+            debug!("error handling fileName ...");
+            return Err(anyhow!("bad request - doc type is incorrect..."));
         }
 
         // set the LLM context
