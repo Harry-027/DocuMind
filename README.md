@@ -68,6 +68,16 @@ In the `env.yaml`, you can configure the following -
 
 ---
 
+## 🧑‍💻 Demo
+
+![Demo](./demo/demo.gif)
+
+Screenshots
+
+![Demo Screenshot](./demo/demo_screen1.png)
+![Demo Screenshot](./demo/demo_screen2.png)
+---
+
 ## 📜 License
 
 DocuMind is licensed under the **MIT License**. See the LICENSE file for details.
