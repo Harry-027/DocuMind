@@ -1,5 +1,7 @@
 # DocuMind (RAG based desktop app)
 
+👉 **DocuMind**: Your documents, your AI-powered mind. 🌿
+
 Turn your documents into dynamic knowledge sources with DocuMind! Simply upload a document (currently supports only pdf format), ask questions, and get instant, accurate responses. Powered by advanced Retrieval-Augmented Generation (RAG) technology, DocuMind understands the content and provides clear and insightful answers. Whether it’s contracts, research papers, reports, or technical manuals — DocuMind helps you access information in seconds.
 
 ---
@@ -92,7 +94,5 @@ Feel free to open issues or submit pull requests.
 
 ## 📧 Contact
 
-For support or inquiries, reach out at [harishmmp@gmail.com](mailto:harishmmp@gmail.com).
+For support or inquiries, reach out at [harishmmp@gmail.com](mailto:harishmmp@gmail.com)
 
----
-👉 **DocuMind**: Your documents, your AI-powered mind. 🌿
