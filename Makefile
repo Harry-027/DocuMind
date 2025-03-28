@@ -1,4 +1,4 @@
-build:
+build_server:
 	@echo "Building the app..."
 	cargo build --release
 	@echo "Done!"
@@ -8,7 +8,7 @@ run_server:
 	./target/release/DocuMindServer
 	
 
-install_client:
+build_client:
 	@echo "Building the client..."
 	cd client && yarn
 
