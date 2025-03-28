@@ -7,7 +7,7 @@ Turn your documents into dynamic knowledge sources with Documind! Simply upload 
 ## Features
 * Ask questions about your documents and get instant, accurate responses.
 * Provides relevant, fact-based answers using RAG.
-* Documents are processed securely with no data leakage
+* Documents are processed securely on your local machine with no data leakage.
 
 ---
 
@@ -37,14 +37,14 @@ docker run -d \
   qdrant/qdrant
 ```
 
-### Pull the AI models to local via Ollama CLI
+### Pull the AI models on your machine via Ollama CLI
 
 ```bash
 ollama pull nomic-embed-text:latest
 ollama pull llama3.1:8b
 ```
 
-### Clone the repo and build the application
+### Clone the repository and build the application
 
 ```bash
 # Clone the repo
@@ -85,4 +85,4 @@ Feel free to open issues or submit pull requests.
 For support or inquiries, reach out at [harishmmp@gmail.com](mailto:harishmmp@gmail.com).
 
 ---
-👉 > **Documind**: Your documents, your AI-powered mind.
+👉 **Documind**: Your documents, your AI-powered mind. 🌿
