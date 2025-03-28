@@ -8,12 +8,10 @@ use axum::{
 use reqwest::Client;
 use serde_json::json;
 
-use config::Config;
+use config::{Config, FileFormat};
 use tracing::{debug, info};
 
 use anyhow::{anyhow, Context, Ok, Result};
-
-pub const ENV_FILE: &str = "env.yaml";
 
 pub enum ModelKind {
     Generate,
@@ -70,8 +68,9 @@ impl ConfigVar {
 
 // fetch the config variables
 pub fn get_settings() -> ConfigVar {
+    let yaml_data = include_str!("../env.yaml");
     let settings = Config::builder()
-        .add_source(config::File::with_name(ENV_FILE))
+        .add_source(config::File::from_str(yaml_data, FileFormat::Yaml))
         .build()
         .expect("setting file is expected to read the input variables");
     let config: ConfigVar = settings.try_deserialize().unwrap();

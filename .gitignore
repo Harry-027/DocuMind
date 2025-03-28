@@ -2,6 +2,7 @@
 /server/qdrant_storage
 /server/uploads
 
+/uploads
 /target
 /server/target
 /client/src-tauri/target
