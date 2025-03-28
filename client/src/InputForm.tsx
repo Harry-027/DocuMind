@@ -42,7 +42,7 @@ const InputForm : React.FC<InputFormProps> = ({ selectedItem }) => {
       </div>
       <div className="flex items-center gap-4 mt-8">
       <p className="w-[10%] text-lg font-bold leading-relaxed">LLM Response::</p>
-      <p className="text-lg leading-relaxed tracking-wide w-[90%] overflow-y-auto max-h-40">{llmResponse}</p>
+      <p className="text-lg leading-relaxed tracking-wide w-[80%] overflow-y-auto max-h-40">{llmResponse}</p>
       </div>
     </div>
   );

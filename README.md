@@ -1,6 +1,6 @@
 # DocuMind (RAG based desktop app)
 
-Turn your documents into dynamic knowledge sources with Documind! Simply upload a document (currently supports only pdf format), ask questions, and get instant, accurate responses. Powered by advanced Retrieval-Augmented Generation (RAG) technology, DocuMind understands the content and provides clear and insightful answers. Whether it’s contracts, research papers, reports, or technical manuals — Documind helps you access information in seconds.
+Turn your documents into dynamic knowledge sources with DocuMind! Simply upload a document (currently supports only pdf format), ask questions, and get instant, accurate responses. Powered by advanced Retrieval-Augmented Generation (RAG) technology, DocuMind understands the content and provides clear and insightful answers. Whether it’s contracts, research papers, reports, or technical manuals — DocuMind helps you access information in seconds.
 
 ---
 
@@ -24,7 +24,7 @@ Make sure you have following installed
 * Rust
 * Ollama
 * Docker
-* Node (v18.19) & yarn
+* Node (v18.19 or later) & yarn
 
 ### Setup the Qdrant vector database
 ```bash
@@ -70,7 +70,7 @@ In the `env.yaml`, you can configure the following -
 
 ## 📜 License
 
-Documind is licensed under the **MIT License**. See the LICENSE file for details.
+DocuMind is licensed under the **MIT License**. See the LICENSE file for details.
 
 ---
 
@@ -85,4 +85,4 @@ Feel free to open issues or submit pull requests.
 For support or inquiries, reach out at [harishmmp@gmail.com](mailto:harishmmp@gmail.com).
 
 ---
-👉 **Documind**: Your documents, your AI-powered mind. 🌿
+👉 **DocuMind**: Your documents, your AI-powered mind. 🌿
